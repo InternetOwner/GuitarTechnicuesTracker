@@ -2,12 +2,13 @@ import mediapipe as mp
 import cv2
 import xml.etree.ElementTree as ET
 import os
+import numpy as np
 
 
 class HandTracking:
     def __init__(self):
         self.mpHands = mp.solutions.hands
-        self.hands = self.mpHands.Hands(max_num_hands=4, min_tracking_confidence=0.5, min_detection_confidence=0.5)
+        self.hands = self.mpHands.Hands(max_num_hands=2, min_tracking_confidence=0.5, min_detection_confidence=0.5)
         self.mpDraw = mp.solutions.drawing_utils
 
     def real_time_hands_detection(self, file_path: str | int = 0):
@@ -76,11 +77,39 @@ class HandTracking:
         out.release()
 
     def make_dataset(self, dir_path: str):
-        dataset_dirs = list(filter(lambda x: "." not in x, os.listdir(dir_path)))
+        dataset_dirs = list(filter(lambda x: os.path.isdir(os.path.join(dir_path, x)), os.listdir(dir_path)))
         marked_dataset = f"marked_{dir_path}"
         os.mkdir(marked_dataset)
         for directory in dataset_dirs:
-            os.mkdir(f"{marked_dataset}/{directory}")
-            if os.listdir(f"{dir_path}/{directory}"):
-                for video in os.listdir(f"{dir_path}/{directory}"):
-                    self.hands_markup_to_xml(f"{dir_path}/{directory}/{video}", f"{marked_dataset}/{directory}/{video[:-4]}.xml")
+            os.mkdir(os.path.join(marked_dataset, directory))
+            if os.listdir(os.path.join(dir_path, directory)):
+                for video in os.listdir(os.path.join(dir_path, directory)):
+                    self.hands_markup_to_xml(os.path.join(dir_path, directory, video),
+                                             os.path.join(marked_dataset, directory, f"{video[:-4]}.xml"))
+
+    def read_dataset(self, dir_path: str) -> tuple[np.ndarray, list]:
+        dataset_dirs = list(filter(lambda x: os.path.isdir(os.path.join(dir_path, x)), os.listdir(dir_path)))
+        markdown = []
+        lables = []
+        for directory in dataset_dirs:
+            for xml_file in os.listdir(os.path.join(dir_path, directory)):
+                doc = ET.parse(os.path.join(dir_path, directory, xml_file))
+                root = doc.getroot()
+                lables.append(dataset_dirs.index(directory))
+                tmp_vid = []
+                for frame in root:
+                    tmp_frame = []
+                    for hand in frame.findall("hand"):
+                        tmp_hand = []
+                        for landmark in hand.findall("landmark"):
+                            tmp_hand.append(
+                                [float(landmark.get("x")), float(landmark.get("y")), float(landmark.get("z"))])
+                        tmp_frame.append(tmp_hand)
+                    if len(tmp_frame) == 0:
+                        tmp_frame = [[[0.0, 0.0, 0.0] for _ in range(21)] for __ in range(2)]
+                    elif len(tmp_frame) == 1:
+                        tmp_frame.append([[0.0, 0.0, 0.0] for _ in range(21)])
+                    tmp_vid.append(tmp_frame)
+                markdown.append(tmp_vid)
+        markdown = np.array(markdown)
+        return (markdown, lables)
