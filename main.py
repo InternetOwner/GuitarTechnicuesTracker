@@ -1,4 +1,4 @@
-from handtrack import HandTracking
+from handtrack import HandTracking, read_dataset
 
 if __name__ == "__main__":
     ht = HandTracking()
@@ -9,4 +9,4 @@ if __name__ == "__main__":
         case "2":
             ht.make_dataset("dataset1")
         case "3":
-            ht.read_dataset("marked_dataset1")
+            print(read_dataset("marked_dataset1")[0])

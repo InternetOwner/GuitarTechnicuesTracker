@@ -5,11 +5,58 @@ import os
 import numpy as np
 
 
+def read_dataset(dir_path: str) -> tuple[np.ndarray, list]:
+    dataset_dirs = list(filter(lambda x: os.path.isdir(os.path.join(dir_path, x)), os.listdir(dir_path)))
+    markdown = []
+    labels = []
+    for i, directory in enumerate(dataset_dirs):
+        labels += [i] * len(os.listdir(os.path.join(dir_path, directory)))
+        for xml_file in os.listdir(os.path.join(dir_path, directory)):
+            doc = ET.parse(os.path.join(dir_path, directory, xml_file))
+            root = doc.getroot()
+            tmp_vid = []
+            for frame in root:
+                tmp_frame = []
+                for hand in frame.findall("hand"):
+                    tmp_hand = []
+                    for landmark in hand.findall("landmark"):
+                        tmp_hand.append(
+                            [float(landmark.get("x")), float(landmark.get("y")), float(landmark.get("z"))])
+                    tmp_hand = np.array(tmp_hand)
+                    a, b = tmp_hand[0], tmp_hand[9]
+                    linalg = np.linalg.norm(b - a)
+                    tmp_frame.append(tmp_hand / linalg)
+                tmp_vid.append(tmp_frame)
+            markdown.append(tmp_vid[1:-1])
+    markdown = np.array(markdown)
+    return markdown, labels
+
+
 class HandTracking:
     def __init__(self):
-        self.mpHands = mp.solutions.hands
-        self.hands = self.mpHands.Hands(max_num_hands=2, min_tracking_confidence=0.5, min_detection_confidence=0.5)
+        self.__mpHands = mp.solutions.hands
+        self.__max_num_hands = 2
+        self.__min_tracking_confidence = 0.5
+        self.__min_detection_confidence = 0.5
+        self.__hands_init()
         self.mpDraw = mp.solutions.drawing_utils
+
+    def __hands_init(self):
+        self.hands = self.__mpHands.Hands(max_num_hands=self.__max_num_hands,
+                                          min_tracking_confidence=self.__min_tracking_confidence,
+                                          min_detection_confidence=self.__min_detection_confidence)
+
+    def change_min_tracking_confidence(self, new_value: int):
+        self.__min_tracking_confidence = new_value
+        self.__hands_init()
+
+    def change_min_detection_confidence(self, new_value: int):
+        self.__min_detection_confidence = new_value
+        self.__hands_init()
+
+    def change_max_num_hands(self, new_value: int):
+        self.__max_num_hands = new_value
+        self.__hands_init()
 
     def real_time_hands_detection(self, file_path: str | int = 0):
         cap = cv2.VideoCapture(file_path)
@@ -61,7 +108,7 @@ class HandTracking:
                     for j, landmark in enumerate(handLms.landmark):
                         landmark = ET.SubElement(hand, "landmark", name=f"landmark_{j + 1}", x=f"{landmark.x: .4f}",
                                                  y=f"{landmark.y: .4f}", z=f"{landmark.z: .4f}")
-                    self.mpDraw.draw_landmarks(img, handLms, self.mpHands.HAND_CONNECTIONS,
+                    self.mpDraw.draw_landmarks(img, handLms, self.__mpHands.HAND_CONNECTIONS,
                                                connection_drawing_spec=self.mpDraw.DrawingSpec(
                                                    color=self.mpDraw.BLACK_COLOR, thickness=2,
                                                    circle_radius=1),
@@ -86,30 +133,3 @@ class HandTracking:
                 for video in os.listdir(os.path.join(dir_path, directory)):
                     self.hands_markup_to_xml(os.path.join(dir_path, directory, video),
                                              os.path.join(marked_dataset, directory, f"{video[:-4]}.xml"))
-
-    def read_dataset(self, dir_path: str) -> tuple[np.ndarray, list]:
-        dataset_dirs = list(filter(lambda x: os.path.isdir(os.path.join(dir_path, x)), os.listdir(dir_path)))
-        markdown = []
-        lables = []
-        for directory in dataset_dirs:
-            for xml_file in os.listdir(os.path.join(dir_path, directory)):
-                doc = ET.parse(os.path.join(dir_path, directory, xml_file))
-                root = doc.getroot()
-                lables.append(dataset_dirs.index(directory))
-                tmp_vid = []
-                for frame in root:
-                    tmp_frame = []
-                    for hand in frame.findall("hand"):
-                        tmp_hand = []
-                        for landmark in hand.findall("landmark"):
-                            tmp_hand.append(
-                                [float(landmark.get("x")), float(landmark.get("y")), float(landmark.get("z"))])
-                        tmp_frame.append(tmp_hand)
-                    if len(tmp_frame) == 0:
-                        tmp_frame = [[[0.0, 0.0, 0.0] for _ in range(21)] for __ in range(2)]
-                    elif len(tmp_frame) == 1:
-                        tmp_frame.append([[0.0, 0.0, 0.0] for _ in range(21)])
-                    tmp_vid.append(tmp_frame)
-                markdown.append(tmp_vid)
-        markdown = np.array(markdown)
-        return (markdown, lables)
