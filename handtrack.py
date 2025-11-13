@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 
-def read_dataset(dir_path: str) -> tuple[np.ndarray, list]:
+def read_dataset(dir_path: str) -> tuple[np.ndarray, list, list]:
     dataset_dirs = list(filter(lambda x: os.path.isdir(os.path.join(dir_path, x)), os.listdir(dir_path)))
     markdown = []
     labels = []
@@ -29,15 +29,15 @@ def read_dataset(dir_path: str) -> tuple[np.ndarray, list]:
                 tmp_vid.append(tmp_frame)
             markdown.append(tmp_vid[1:-1])
     markdown = np.array(markdown)
-    return markdown, labels
+    return markdown, labels, dataset_dirs
 
 
 class HandTracking:
-    def __init__(self):
+    def __init__(self, max_num_hands: int, min_tracking_confidence: float, min_detection_confidence: float):
         self.__mpHands = mp.solutions.hands
-        self.__max_num_hands = 2
-        self.__min_tracking_confidence = 0.5
-        self.__min_detection_confidence = 0.5
+        self.__max_num_hands = max_num_hands
+        self.__min_tracking_confidence = min_tracking_confidence
+        self.__min_detection_confidence = min_detection_confidence
         self.__hands_init()
         self.mpDraw = mp.solutions.drawing_utils
 
@@ -70,7 +70,7 @@ class HandTracking:
             results = self.hands.process(imgRGB)
             if results.multi_hand_landmarks:
                 for handLms in results.multi_hand_landmarks:
-                    self.mpDraw.draw_landmarks(img, handLms, self.mpHands.HAND_CONNECTIONS,
+                    self.mpDraw.draw_landmarks(img, handLms, self.__mpHands.HAND_CONNECTIONS,
                                                connection_drawing_spec=self.mpDraw.DrawingSpec(
                                                    color=self.mpDraw.BLACK_COLOR, thickness=2,
                                                    circle_radius=1),
@@ -103,12 +103,10 @@ class HandTracking:
             results = self.hands.process(imgRGB)
 
             if results.multi_hand_landmarks:
-                for i, handLms in enumerate(results.multi_hand_landmarks):
-                    hand = ET.SubElement(frame, "hand", name=f"hand_{str(i + 1)}", type="hand")
-                    for j, landmark in enumerate(handLms.landmark):
-                        landmark = ET.SubElement(hand, "landmark", name=f"landmark_{j + 1}", x=f"{landmark.x: .4f}",
+                for j, landmark in enumerate(results.multi_hand_landmarks[0].landmark):
+                    landmark = ET.SubElement(frame, "landmark", name=f"landmark_{j + 1}", x=f"{landmark.x: .4f}",
                                                  y=f"{landmark.y: .4f}", z=f"{landmark.z: .4f}")
-                    self.mpDraw.draw_landmarks(img, handLms, self.__mpHands.HAND_CONNECTIONS,
+                    self.mpDraw.draw_landmarks(img, results.multi_hand_landmarks[0], self.__mpHands.HAND_CONNECTIONS,
                                                connection_drawing_spec=self.mpDraw.DrawingSpec(
                                                    color=self.mpDraw.BLACK_COLOR, thickness=2,
                                                    circle_radius=1),
