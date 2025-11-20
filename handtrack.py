@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 
-def read_dataset(dir_path: str) -> tuple[np.ndarray, list, list]:
+def read_dataset(dir_path: str) -> tuple[list, list, list]:
     dataset_dirs = list(filter(lambda x: os.path.isdir(os.path.join(dir_path, x)), os.listdir(dir_path)))
     markdown = []
     labels = []
@@ -17,18 +17,20 @@ def read_dataset(dir_path: str) -> tuple[np.ndarray, list, list]:
             tmp_vid = []
             for frame in root:
                 tmp_frame = []
-                for hand in frame.findall("hand"):
-                    tmp_hand = []
+                try:
+                    hand = frame.findall("hand")[0]
                     for landmark in hand.findall("landmark"):
-                        tmp_hand.append(
+                        tmp_frame.append(
                             [float(landmark.get("x")), float(landmark.get("y")), float(landmark.get("z"))])
-                    tmp_hand = np.array(tmp_hand)
-                    a, b = tmp_hand[0], tmp_hand[9]
-                    linalg = np.linalg.norm(b - a)
-                    tmp_frame.append(tmp_hand / linalg)
+                    tmp_frame = np.array(tmp_frame)
+                    a, b = tmp_frame[0], tmp_frame[9]
+                    distance = np.linalg.norm(b - a)
+                    tmp_frame = tmp_frame / distance if distance > 0 else tmp_frame
+                    tmp_frame = tmp_frame.flatten()
+                except (IndexError, TypeError):
+                    pass
                 tmp_vid.append(tmp_frame)
             markdown.append(tmp_vid[1:-1])
-    markdown = np.array(markdown)
     return markdown, labels, dataset_dirs
 
 
@@ -82,7 +84,7 @@ class HandTracking:
         cap.release()
         cv2.destroyAllWindows()
 
-    def hands_markup_to_xml(self, file_path: str, output_xml_filename: str):
+    def hands_markup_to_xml(self, file_path: str, output_xml_filename: str, save: bool = False):
         cap = cv2.VideoCapture(file_path)
 
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -105,7 +107,7 @@ class HandTracking:
             if results.multi_hand_landmarks:
                 for j, landmark in enumerate(results.multi_hand_landmarks[0].landmark):
                     landmark = ET.SubElement(frame, "landmark", name=f"landmark_{j + 1}", x=f"{landmark.x: .4f}",
-                                                 y=f"{landmark.y: .4f}", z=f"{landmark.z: .4f}")
+                                             y=f"{landmark.y: .4f}", z=f"{landmark.z: .4f}")
                     self.mpDraw.draw_landmarks(img, results.multi_hand_landmarks[0], self.__mpHands.HAND_CONNECTIONS,
                                                connection_drawing_spec=self.mpDraw.DrawingSpec(
                                                    color=self.mpDraw.BLACK_COLOR, thickness=2,
@@ -121,7 +123,7 @@ class HandTracking:
         cap.release()
         out.release()
 
-    def make_dataset(self, dir_path: str):
+    def make_dataset(self, dir_path: str, save: bool = False):
         dataset_dirs = list(filter(lambda x: os.path.isdir(os.path.join(dir_path, x)), os.listdir(dir_path)))
         marked_dataset = f"marked_{dir_path}"
         os.mkdir(marked_dataset)
@@ -130,4 +132,4 @@ class HandTracking:
             if os.listdir(os.path.join(dir_path, directory)):
                 for video in os.listdir(os.path.join(dir_path, directory)):
                     self.hands_markup_to_xml(os.path.join(dir_path, directory, video),
-                                             os.path.join(marked_dataset, directory, f"{video[:-4]}.xml"))
+                                             os.path.join(marked_dataset, directory, f"{video[:-4]}.xml"), save)
