@@ -16,10 +16,9 @@ def read_dataset(dir_path: str) -> tuple[list, list, list]:
             root = doc.getroot()
             tmp_vid = []
             for frame in root:
-                tmp_frame = []
                 try:
-                    hand = frame.findall("hand")[0]
-                    for landmark in hand.findall("landmark"):
+                    tmp_frame = []
+                    for landmark in frame.findall("landmark"):
                         tmp_frame.append(
                             [float(landmark.get("x")), float(landmark.get("y")), float(landmark.get("z"))])
                     tmp_frame = np.array(tmp_frame)
@@ -27,9 +26,9 @@ def read_dataset(dir_path: str) -> tuple[list, list, list]:
                     distance = np.linalg.norm(b - a)
                     tmp_frame = tmp_frame / distance if distance > 0 else tmp_frame
                     tmp_frame = tmp_frame.flatten()
+                    tmp_vid.append(tmp_frame)
                 except (IndexError, TypeError):
                     pass
-                tmp_vid.append(tmp_frame)
             markdown.append(tmp_vid[1:-1])
     return markdown, labels, dataset_dirs
 

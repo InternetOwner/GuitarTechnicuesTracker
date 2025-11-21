@@ -10,13 +10,18 @@ if __name__ == "__main__":
         case "1":
             ht.real_time_hands_detection(input())
         case "2":
-            ht.make_dataset("dataset1")
+            ht.make_dataset(input())
         case "3":
-            print(read_dataset("marked_dataset1")[0])
+            print(read_dataset("marked_" + input())[0])
         case "4":
-            dataset, labels, classes = read_dataset("marked_dataset1")
+            dataset, labels, classes = read_dataset("marked_dataset")
+            test_dataset, _, __ = read_dataset("marked_test")
+
             dataset = SequenceDataset(dataset, labels)
             dataloader = DataLoader(dataset, batch_size=16, shuffle=True, collate_fn=collate_fn)
+
+            test_dataset = SequenceDataset(test_dataset, _)
+            test_dataloader = DataLoader(test_dataset, batch_size=16, shuffle=True, collate_fn=collate_fn)
 
             INPUT_DIM = 63  # 21 * 3 - mediapipe landmarks
             HIDDEN_DIM = 128
@@ -24,4 +29,5 @@ if __name__ == "__main__":
             NUM_LAYERS = 2
 
             model = TechniqueClassifier(INPUT_DIM, HIDDEN_DIM, OUTPUT_DIM, NUM_LAYERS)
-            model.train_model(dataloader)
+            model.train_model(dataloader, epochs=100)
+            model.eval_model(test_dataloader)
