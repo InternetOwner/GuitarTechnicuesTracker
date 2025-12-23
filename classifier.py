@@ -43,6 +43,9 @@ class TechniqueClassifier(nn.Module):
         out = self.fc(hn[-1])  # Полносвязный слой
         return out
 
+    def save(self, path):
+        torch.save(self.state_dict(), path)
+
     def train_model(self, dataloader: DataLoader, epochs: int = 10, lr: float = 0.001):
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.parameters(), lr)
@@ -73,7 +76,9 @@ class TechniqueClassifier(nn.Module):
                 outputs = self(inputs, lengths)
 
                 _, predicted = torch.max(outputs.data, 1)
+                print(labels.tolist(), predicted.tolist())
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
         accuracy = 100 * correct / total
         print(f'Accuracy: {accuracy:.2f}%')
+

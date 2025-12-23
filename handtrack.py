@@ -83,15 +83,8 @@ class HandTracking:
         cap.release()
         cv2.destroyAllWindows()
 
-    def hands_markup_to_xml(self, file_path: str, output_xml_filename: str, save: bool = False):
+    def hands_markup_to_xml(self, file_path: str, output_xml_filename: str):
         cap = cv2.VideoCapture(file_path)
-
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = int(cap.get(cv2.CAP_PROP_FPS)) or 30
-        fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-        out = cv2.VideoWriter('output.mp4', fourcc, fps, (frame_width, frame_height))
-
         count = 0
         frames = ET.Element("frames")
         while True:
@@ -105,8 +98,8 @@ class HandTracking:
 
             if results.multi_hand_landmarks:
                 for j, landmark in enumerate(results.multi_hand_landmarks[0].landmark):
-                    landmark = ET.SubElement(frame, "landmark", name=f"landmark_{j + 1}", x=f"{landmark.x: .4f}",
-                                             y=f"{landmark.y: .4f}", z=f"{landmark.z: .4f}")
+                    ET.SubElement(frame, "landmark", name=f"landmark_{j + 1}", x=f"{landmark.x: .4f}",
+                                  y=f"{landmark.y: .4f}", z=f"{landmark.z: .4f}")
                     self.mpDraw.draw_landmarks(img, results.multi_hand_landmarks[0], self.__mpHands.HAND_CONNECTIONS,
                                                connection_drawing_spec=self.mpDraw.DrawingSpec(
                                                    color=self.mpDraw.BLACK_COLOR, thickness=2,
@@ -114,15 +107,13 @@ class HandTracking:
                                                landmark_drawing_spec=self.mpDraw.DrawingSpec(
                                                    color=self.mpDraw.RED_COLOR, thickness=1,
                                                    circle_radius=1))
-            out.write(img)
             cv2.waitKey(1)
         data = ET.tostring(frames)
         with open(output_xml_filename, "wb+") as videodata:
             videodata.write(data)
         cap.release()
-        out.release()
 
-    def make_dataset(self, dir_path: str, save: bool = False):
+    def make_dataset(self, dir_path: str):
         dataset_dirs = list(filter(lambda x: os.path.isdir(os.path.join(dir_path, x)), os.listdir(dir_path)))
         marked_dataset = f"marked_{dir_path}"
         os.mkdir(marked_dataset)
@@ -131,4 +122,4 @@ class HandTracking:
             if os.listdir(os.path.join(dir_path, directory)):
                 for video in os.listdir(os.path.join(dir_path, directory)):
                     self.hands_markup_to_xml(os.path.join(dir_path, directory, video),
-                                             os.path.join(marked_dataset, directory, f"{video[:-4]}.xml"), save)
+                                             os.path.join(marked_dataset, directory, f"{video[:-4]}.xml"))
