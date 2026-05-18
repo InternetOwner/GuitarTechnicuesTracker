@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 
 
+
 class SequenceDataset(Dataset):
     def __init__(self, sequences, labels):
         self.sequences = [torch.tensor(s).float() for s in sequences]

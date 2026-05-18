@@ -61,8 +61,8 @@ class HandTracking:
 
     def real_time_hands_detection(self, file_path: str | int = 0):
         cap = cv2.VideoCapture(file_path)
-        cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("Image", 800, 600)
+        # cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
+        # cv2.resizeWindow("Image", 800, 600)
         while True:
             success, img = cap.read()
             if not success:
@@ -78,10 +78,12 @@ class HandTracking:
                                                landmark_drawing_spec=self.mpDraw.DrawingSpec(
                                                    color=self.mpDraw.RED_COLOR, thickness=1,
                                                    circle_radius=1))
-            cv2.imshow("Image", img)
-            cv2.waitKey(1)
+            # cv2.imshow("Image", img)
+            # cv2.waitKey(1)
+            yield cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         cap.release()
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
+
 
     def hands_markup_to_xml(self, file_path: str, output_xml_filename: str):
         cap = cv2.VideoCapture(file_path)
@@ -100,13 +102,13 @@ class HandTracking:
                 for j, landmark in enumerate(results.multi_hand_landmarks[0].landmark):
                     ET.SubElement(frame, "landmark", name=f"landmark_{j + 1}", x=f"{landmark.x: .4f}",
                                   y=f"{landmark.y: .4f}", z=f"{landmark.z: .4f}")
-                    self.mpDraw.draw_landmarks(img, results.multi_hand_landmarks[0], self.__mpHands.HAND_CONNECTIONS,
-                                               connection_drawing_spec=self.mpDraw.DrawingSpec(
-                                                   color=self.mpDraw.BLACK_COLOR, thickness=2,
-                                                   circle_radius=1),
-                                               landmark_drawing_spec=self.mpDraw.DrawingSpec(
-                                                   color=self.mpDraw.RED_COLOR, thickness=1,
-                                                   circle_radius=1))
+                    # self.mpDraw.draw_landmarks(img, results.multi_hand_landmarks[0], self.__mpHands.HAND_CONNECTIONS,
+                    #                            connection_drawing_spec=self.mpDraw.DrawingSpec(
+                    #                                color=self.mpDraw.BLACK_COLOR, thickness=2,
+                    #                                circle_radius=1),
+                    #                            landmark_drawing_spec=self.mpDraw.DrawingSpec(
+                    #                                color=self.mpDraw.RED_COLOR, thickness=1,
+                    #                                circle_radius=1))
             cv2.waitKey(1)
         data = ET.tostring(frames)
         with open(output_xml_filename, "wb+") as videodata:
