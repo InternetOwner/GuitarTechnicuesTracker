@@ -61,14 +61,16 @@ class HandTracking:
 
     def real_time_hands_detection(self, file_path: str | int = 0):
         cap = cv2.VideoCapture(file_path)
-        # cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
-        # cv2.resizeWindow("Image", 800, 600)
         while True:
             success, img = cap.read()
             if not success:
                 break
+
             imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             results = self.hands.process(imgRGB)
+
+            _hands = []
+
             if results.multi_hand_landmarks:
                 for handLms in results.multi_hand_landmarks:
                     self.mpDraw.draw_landmarks(img, handLms, self.__mpHands.HAND_CONNECTIONS,
@@ -78,11 +80,20 @@ class HandTracking:
                                                landmark_drawing_spec=self.mpDraw.DrawingSpec(
                                                    color=self.mpDraw.RED_COLOR, thickness=1,
                                                    circle_radius=1))
-            # cv2.imshow("Image", img)
-            # cv2.waitKey(1)
-            yield cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+                    current_hand_data = []
+                    for lm in handLms.landmark:
+                        current_hand_data.extend([
+                            round(lm.x, 4),
+                            round(lm.y, 4),
+                            round(lm.z, 4)
+                        ])
+
+                    _hands.append(current_hand_data)
+
+            yield cv2.cvtColor(img, cv2.COLOR_BGR2RGB), _hands
         cap.release()
-        # cv2.destroyAllWindows()
+
 
 
     def hands_markup_to_xml(self, file_path: str, output_xml_filename: str):
